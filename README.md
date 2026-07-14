@@ -1,6 +1,6 @@
 # Factor Zoo: Multi-Factor Portfolio Attribution
 
-> A Python implementation of multi-factor portfolio attribution to understand what drives returns.
+> I built this to answer a simple question: when a portfolio makes money, *why* did it make money? Was it skill, market exposure, or just being in the right factors at the right time?
 
 ---
 
@@ -26,24 +26,24 @@
 
 ## Motivation
 
-I built this project to better understand why portfolios earn the returns they do. Looking at raw performance, like a 15% annual return, isn't enough. If the broader equity market returned 20% over the same period, that 15% is actually an underperformance. Even worse, if that 15% came from taking on massive and uncompensated volatility, the risk-adjusted performance is poor. 
+I started reading about factor investing and kept seeing the same claim: "most fund managers don't actually beat the market — they just take on more risk." That sounded like something I could test, so I decided to build a tool that actually checks.
 
-While learning about factor investing, I wanted to implement the Fama-French models myself instead of only reading about them. One goal of this project was to connect the financial theory I was learning with actual Python code.
+A 15% annual return sounds impressive until you find out the market returned 20% over the same period. Or worse — that the 15% came from taking on way more volatility than necessary. I wanted to go beyond surface-level performance numbers and understand what's really going on under the hood.
 
-By running regressions on a portfolio's excess returns against macroeconomic risk factors, we can separate true outperformance (Alpha) from standard market exposure (Beta). Although this project isn't meant to compete with institutional portfolio analytics platforms, it demonstrates many of the same core ideas used by quantitative researchers to evaluate strategies.
+My goal was to implement the Fama-French factor models myself instead of just reading about them in textbooks. By regressing a portfolio's excess returns against known risk factors, I can separate real skill (alpha) from standard market exposure (beta). This isn't meant to compete with professional analytics tools — I built it because I genuinely wanted to understand how quantitative researchers think about returns.
 
 ---
 
 ## Project Features
 
-- **Data Ingestion**: Pulls historical asset prices from Yahoo Finance and factor returns from the Kenneth R. French Data Library.
+- **Data Ingestion**: Pulls historical prices from Yahoo Finance and factor returns from the Kenneth R. French Data Library.
 - **Portfolio Construction**: Builds custom-weighted portfolios from user-defined ticker lists.
-- **Econometric Modeling**: Runs CAPM, FF3, FF5, and FF6 regressions to see how Alpha changes as more explanatory variables are added.
-- **Statistical Estimation**: Uses Ordinary Least Squares (OLS) regression to estimate Betas, $R^2$, and robust standard errors.
-- **Rolling Regressions**: Analyzes dynamic factor exposures over time to detect style drift.
-- **Return Attribution**: Decomposes total returns into specific percentage contributions from Market, Size, Value, Profitability, Investment, and Momentum factors.
-- **Visualizations**: Generates factor loading charts, attribution waterfalls, and rolling beta trajectories.
-- **Summary Reports**: Automatically generates a plain-English text summary of the regression outputs.
+- **Factor Regressions**: Runs CAPM, FF3, FF5, and FF6 regressions to see how alpha changes as more factors are added.
+- **Statistical Output**: Uses OLS regression to estimate betas, $R^2$, p-values, and standard errors.
+- **Rolling Regressions**: Tracks how factor exposures shift over time to detect style drift.
+- **Return Attribution**: Breaks down total returns into percentage contributions from Market, Size, Value, Profitability, Investment, and Momentum.
+- **Visualizations**: Generates factor loading charts, attribution waterfalls, and rolling beta plots.
+- **Summary Reports**: Automatically writes a plain-English investment memo from the regression results.
 
 ---
 
@@ -52,11 +52,11 @@ By running regressions on a portfolio's excess returns against macroeconomic ris
 ```text
 Factor-Zoo-Attribution/
 │
-├── factor_zoo.py               # Core application and quantitative engine
-├── requirements.txt            # Python dependency specifications
-├── README.md                   # Comprehensive project documentation
+├── factor_zoo.py               # Main script — all data, regressions, and charts
+├── requirements.txt            # Python dependencies
+├── README.md                   # Project documentation
 │
-├── output/                     # Generated analytics artifacts
+├── output/                     # Generated charts and reports
 │   ├── 1_factor_loadings.png
 │   ├── 2_attribution_waterfall.png
 │   ├── 3_rolling_betas.png
@@ -64,7 +64,7 @@ Factor-Zoo-Attribution/
 │   ├── 5_factor_correlation.png
 │   └── investment_memo.txt
 │
-└── data/                       # Cached data directories (git-ignored)
+└── data/                       # Cached data (git-ignored)
     ├── portfolio_prices.csv
     └── fama_french_factors.csv
 ```
@@ -73,90 +73,75 @@ Factor-Zoo-Attribution/
 
 ## Finance Background
 
-To understand what the code is doing, it helps to outline the underlying finance concepts.
+Before diving into the code, here's the finance you need to know. I had to learn all of this while building the project, so I'm going to explain it the way I wish someone had explained it to me.
 
 ### What is Risk?
-In finance, risk is fundamentally defined as variance or uncertainty. When buying an asset, you are not guaranteed a specific outcome; you are purchasing a probability distribution of future returns. 
+In finance, risk isn't just "you might lose money." It's uncertainty — when you buy a stock, you're not guaranteed any specific outcome. You're essentially buying a probability distribution of future returns. That framing clicked for me when I realized it's why two assets with the same average return can have completely different risk profiles.
 
 ### Systematic vs. Unsystematic Risk
-1. **Unsystematic Risk (Idiosyncratic Risk)**: Risk specific to an individual company (e.g., a CEO resigning or a drug trial failing). This risk can be virtually eliminated through diversification.
-2. **Systematic Risk (Market Risk)**: Macroeconomic risk that affects all companies simultaneously (e.g., interest rate changes or inflation). It cannot be diversified away.
+1. **Unsystematic Risk**: Risk specific to one company — a CEO resigns, a drug trial fails. You can basically eliminate this by owning enough different stocks (diversification).
+2. **Systematic Risk**: Economy-wide risk that hits everything — interest rate hikes, recessions, inflation. No amount of diversification removes this. This is the risk that factor models care about.
 
-### Why do Investors Demand Compensation for Risk?
-Rational investors are risk-averse. To entice them to take on systematic risk, the market must offer an expected return higher than a risk-free asset like a U.S. Treasury Bill.
-
-### How do Factor Models Work?
-A factor model attempts to explain an asset's return based on its exposure to systematic risks (factors). Instead of analyzing 500 individual stocks, these models suggest that returns are driven by a few underlying forces.
-
-**How this project implements it**: The core of `factor_zoo.py` is an OLS regression engine that takes the time-series of a portfolio's returns and regresses it against the time-series of these systematic risk factors to calculate exact numerical exposures (Betas).
+### Why Factor Models?
+Here's the key insight that made factor models click for me: instead of trying to explain why 500 individual stocks move, you can explain most of their behavior with just a handful of underlying forces. The code in `factor_zoo.py` uses OLS regression to measure exactly how exposed a portfolio is to each of those forces (its betas).
 
 ---
 
 ## CAPM (Capital Asset Pricing Model)
 
-The Capital Asset Pricing Model, developed by William Sharpe, John Lintner, and Jan Mossin in the 1960s, was the first formal asset pricing model.
+CAPM (Sharpe, Lintner, Mossin — 1960s) is the simplest factor model: it says there's only one source of systematic risk, the overall market. I started here because it's the foundation everything else builds on.
 
-### Intuition
-CAPM suggests there is only one source of systematic risk: the broader market.
-- **Market Beta ($\beta$)**: An asset's sensitivity to market movements. A beta of 1.0 means it moves with the market.
-- **Alpha ($\alpha$)**: The residual return unexplained by market exposure. In an efficient market, true alpha should be zero. Positive alpha indicates superior skill (or luck).
+- **Market Beta ($\beta$)**: How much the portfolio moves when the market moves. Beta of 1.0 = moves exactly with the market. Beta of 1.5 = 50% more volatile than the market.
+- **Alpha ($\alpha$)**: Whatever return is left over after you account for market exposure. This is the "did the manager actually add value?" number. In a perfectly efficient market, alpha should be zero.
 
-### Mathematics
+### Formula
 $$ E(R_i) - R_f = \alpha + \beta_i [E(R_m) - R_f] + \epsilon_i $$
 
-**How this project implements it**: The script calculates the portfolio's return minus the risk-free rate ($R_f$) and regresses it solely against the Market Excess Return (`Mkt-RF`) column downloaded from the Fama-French database.
+**In the code**: I subtract the risk-free rate from the portfolio's return and regress it against the Market Excess Return (`Mkt-RF`) from the Fama-French database. Simple, but limited — which is why the later models add more factors.
 
 ---
 
 ## Fama-French 3-Factor Model
 
-Eugene Fama and Kenneth French introduced two additional factors in 1993 after observing that CAPM failed to explain certain anomalies.
+CAPM left a lot unexplained. Fama and French (1993) found two patterns it completely missed:
 
-### Intuition
-1. **SMB (Small Minus Big)**: The Size factor. Small-cap stocks historically outperform large-cap stocks because they are less liquid and inherently riskier.
-2. **HML (High Minus Low)**: The Value factor. Value stocks (high book-to-market ratio) historically require a premium to attract investors compared to Growth stocks (low book-to-market).
+1. **SMB (Small Minus Big)**: Small-cap stocks have historically beaten large-caps. The intuition is that smaller companies are riskier and less liquid, so investors demand a premium for holding them.
+2. **HML (High Minus Low)**: Value stocks (cheap relative to book value) have historically outperformed growth stocks. This was one of the first "anomalies" that challenged the idea of a single-factor world.
 
-**How this project implements it**: The code adds the `SMB` and `HML` columns as independent variables in the multiple regression. This prevents the model from assigning false Alpha to a portfolio that simply over-weights small-cap value stocks.
+**In the code**: I add `SMB` and `HML` as extra independent variables in the regression. This is important because without them, a portfolio that simply overweights small-cap value stocks would show fake alpha — the model would credit the manager for returns that were really just factor exposure.
 
 ---
 
 ## Fama-French 5-Factor Model
 
-In 2015, Fama and French added two corporate fundamental factors to their model.
+In 2015, Fama and French realized even three factors weren't enough and added two based on company fundamentals:
 
-### Intuition
-1. **RMW (Robust Minus Weak)**: The Profitability factor. Companies with robust operating profitability tend to yield higher returns than weak ones.
-2. **CMA (Conservative Minus Aggressive)**: The Investment factor. Companies that invest conservatively (low capital expenditure) historically provide a systematic premium over aggressive spenders.
+1. **RMW (Robust Minus Weak)**: Companies with strong operating profitability earn higher returns. This one makes intuitive sense — profitable companies *should* be worth more.
+2. **CMA (Conservative Minus Aggressive)**: Companies that don't spend aggressively on expansion have historically outperformed those that do. I found this one counterintuitive at first — you'd think growth spending would be rewarded, but the data says otherwise.
 
-**How this project implements it**: The script merges the `RMW` and `CMA` columns into the dataset. When the regression runs, it isolates how much of the portfolio's return was purely due to holding highly profitable, conservatively investing companies.
+**In the code**: I merge `RMW` and `CMA` into the dataset. When the regression runs, it can now isolate how much of the portfolio's return came purely from holding profitable, conservatively-investing companies — and how much was something else.
 
 ---
 
 ## Momentum (Carhart 4-Factor)
 
-Mark Carhart (1997) documented that asset prices display time-series persistence.
+This one is probably the most interesting to me. Carhart (1997) showed that stocks which went up over the past 3–12 months tend to *keep* going up, and stocks that went down tend to keep falling. It's basically trend-following, and it seems to work because of behavioral biases — investors are slow to react to new information, or they sell winners too early and hold onto losers hoping they'll recover.
 
-### Intuition
-Momentum is the observation that stocks which performed well over the past 3 to 12 months tend to continue performing well, while past losers continue to lose. It is often explained by behavioral biases like investor underreaction to news or the disposition effect (selling winners too early to lock in gains and holding losers too long).
-
-**How this project implements it**: The script downloads the `F-F_Momentum_Factor` dataset and aligns it with the standard factor data to capture the Momentum (`MOM` or `UMD` — Up Minus Down) premium.
+**In the code**: I download the `F-F_Momentum_Factor` dataset and align it with the other factors. Adding momentum to the model often explains a chunk of return that the other five factors miss.
 
 ---
 
 ## Fama-French 6-Factor Model
 
-This model integrates the 5-Factor model with the Momentum factor.
+This is the final boss: Market + Size + Value + Profitability + Investment + Momentum, all in one regression. It controls for basically every well-documented systematic return pattern in academic finance.
 
-### Why Six Factors?
-By regressing against Market, Size, Value, Profitability, Investment, and Momentum, we account for almost all well-documented systematic anomalies. If a portfolio manager still shows a statistically significant positive Alpha in this 6-Factor model, it strongly suggests genuine stock-picking skill or an unmeasured risk exposure, rather than passive factor harvesting.
-
-**How this project implements it**: The script runs this as the final and most rigorous test in the suite, using the output to generate the final investment memo and attribution waterfall.
+The way I think about it: if a portfolio *still* shows significant positive alpha after you've accounted for all six of these factors, that's a pretty strong signal that something genuinely skillful is going on (or there's a risk the model doesn't capture). The script runs this as the last and most demanding test, and uses the output to generate the final investment memo and attribution waterfall.
 
 ---
 
 ## Data Pipeline
 
-Building a clean data pipeline to handle time-series alignment was one of the most important parts of this project. Financial data from different sources is rarely perfectly synchronized.
+Honestly, I spent more time on data cleaning than on the actual regressions. Getting Yahoo Finance data and Fama-French data to play nicely together was trickier than I expected — different date formats, different frequencies, missing months. This is the part of the project that taught me the most about real-world data work.
 
 ```mermaid
 graph TD
@@ -178,10 +163,10 @@ graph TD
 ```
 
 ### Pipeline Stages
-1. **Downloading Prices**: I use `yfinance` to get adjusted closing prices, which automatically account for dividends and stock splits.
-2. **Calculating Returns**: The daily prices are resampled to end-of-month prices (`resample('M').last()`), and percentage changes are computed. This is necessary because Fama-French factor data is distributed monthly.
-3. **Fetching Factors**: The `pandas-datareader` library dynamically downloads the latest factor datasets directly from the Dartmouth servers.
-4. **Data Alignment**: This is a critical step. The script uses an inner join on the date indices. If a month of factor data hasn't been published yet, but we have Yahoo Finance data for that month, the inner join drops it. This prevents `NaN` errors and ensures look-ahead bias is avoided.
+1. **Downloading Prices**: `yfinance` fetches adjusted closing prices, which already account for dividends and stock splits — so I don't have to manually adjust for those.
+2. **Calculating Returns**: Daily prices are resampled to month-end (`resample('M').last()`) and converted to percentage changes. I had to do this because Fama-French data is monthly, so my portfolio data needs to match.
+3. **Fetching Factors**: `pandas-datareader` pulls the latest factor datasets directly from the Dartmouth servers — no manual CSV downloads needed.
+4. **Data Alignment**: This is where I use an inner join on dates. If a month of factor data hasn't been published yet but I have Yahoo Finance data for it, the join drops that month. This prevents `NaN` errors and avoids look-ahead bias (using data you wouldn't have had in real time).
 
 ---
 
@@ -201,7 +186,7 @@ graph TD
                               |
                               v
 +-------------------------------------------------------------+
-|                 Econometric Modeling Core                   |
+|                    Regression Engine                        |
 |  + CAPM Estimator                                           |
 |  + FF3 Estimator           [StatsModels API]                |
 |  + FF5 Estimator                                            |
@@ -221,36 +206,36 @@ graph TD
 
 ## Statistical Methodology
 
-To interpret the outputs, it helps to understand the underlying econometrics.
+This section covers the stats behind the regressions. I had to learn most of this as I went, so I'll explain it the way that made sense to me.
 
 ### OLS Regression
-Ordinary Least Squares minimizes the sum of squared residuals to estimate the relationship between the factors (independent variables) and the portfolio's excess return (dependent variable).
+Ordinary Least Squares is the workhorse here. It finds the line (or hyperplane, when there are multiple factors) that minimizes the sum of squared errors between predicted and actual values. The dependent variable is the portfolio's excess return; the independent variables are the risk factors. It's conceptually simple, but surprisingly powerful.
 
 ### Key Metrics
-- **$R^2$**: The percentage of the portfolio's variance explained by the factors. An $R^2$ of 0.85 means 85% of the volatility is driven by the model's factors.
-- **Adjusted $R^2$**: Penalizes the model for adding useless variables. I use this to check if moving from the 3-factor to 5-factor model actually improved explanatory power.
-- **p-values**: The probability of observing the estimated Beta if the true Beta was zero. A p-value < 0.05 indicates statistical significance.
-- **t-statistics**: Calculated as the coefficient divided by its standard error. Used to determine the p-value.
-- **Alpha Significance**: The intercept of the regression. A positive alpha is only meaningful if its p-value is significant; otherwise, it's likely just statistical noise.
+- **$R^2$**: How much of the portfolio's variance the factors explain. $R^2$ of 0.85 means 85% of the return variation is captured by the model — the remaining 15% is stock-specific noise.
+- **Adjusted $R^2$**: Same idea, but it penalizes you for adding useless variables. I check this to make sure that going from FF3 to FF5 actually improved the model and didn't just overfit.
+- **p-values**: The probability of seeing a beta this large if the true beta were actually zero. Below 0.05 = statistically significant. This is how I decide if a factor exposure is real or just noise.
+- **t-statistics**: The coefficient divided by its standard error. Bigger absolute values = more confidence. This is what generates the p-value.
+- **Alpha Significance**: A positive alpha sounds great, but it only counts if its p-value is significant. Otherwise, you might just be looking at random variation.
 
-**How this project implements it**: I chose `statsmodels.api.OLS` over `scikit-learn` because `statsmodels` provides a comprehensive econometric summary out-of-the-box, allowing easy extraction of t-stats, p-values, and standard errors, which are crucial for financial analysis.
+**Why `statsmodels` over `scikit-learn`?** This was a deliberate choice. `scikit-learn`'s `LinearRegression` gives you coefficients and $R^2$, but it doesn't give you t-stats, p-values, confidence intervals, or standard errors. For financial analysis, those are the numbers that actually matter — they tell you whether your results are statistically meaningful or just noise.
 
 ---
 
 ## Code Walkthrough
 
-I structured `factor_zoo.py` logically to separate configuration, data processing, and visualization.
+Here's how `factor_zoo.py` is organized. I tried to keep things modular so I could swap in different portfolios without touching the core logic.
 
-- **Portfolio Construction**: The user defines a dictionary of tickers and weights at the top of the file. This makes it easy to test different portfolios without changing the core code. The script takes these weights and computes the dot product against the asset returns to generate a single time-series of aggregate portfolio returns.
-- **Downloading Prices**: The script uses `yfinance` to download adjusted closing prices for the defined tickers. Adjusted prices are necessary because they automatically account for dividends and stock splits, reflecting the true return.
-- **Calculating Returns**: Daily prices are resampled to end-of-month prices (`df.resample('M').last()`), and percentage changes are computed. I did this because the Fama-French factor data is published monthly, so our portfolio data must match that frequency exactly.
-- **Downloading Factor Data**: The `pandas-datareader` library fetches the latest Fama-French factors directly from the Dartmouth servers. This ensures the model is always using the most up-to-date academic datasets without needing manual CSV downloads.
-- **Aligning Datasets**: Financial time-series data is notoriously messy. I used an inner join on the date indices between the portfolio returns and the factor data. This drops any mismatched dates, preventing `NaN` errors and avoiding look-ahead bias.
-- **Regression**: The script iterates through the CAPM, FF3, FF5, and FF6 models. I use `sm.add_constant(X)` to append an intercept to the independent variables. Without this constant, the regression would force the intercept to zero, making it mathematically impossible to estimate Alpha.
-- **Attribution**: To figure out how much a factor contributed to the total portfolio return, the script multiplies the calculated Beta for that factor by the annualized mean return of the factor over the analyzed time period.
-- **Rolling Regression**: Static regressions assume factor exposures never change. To capture "style drift" (e.g., a manager slowly moving from Value to Growth), the script loops through the time-series with a 36-month window, refitting the OLS model at each step to track dynamic Betas.
-- **Plotting**: The visualization functions use `matplotlib` to generate charts. They iterate through the regression results to pull out Betas, $R^2$ values, and rolling metrics, styling them into clean, readable PNGs.
-- **Memo Generation**: Finally, the script parses the FF6 results dictionary and uses string formatting to write a plain-English text document explaining the statistical conclusions. This makes the output accessible to someone who might not want to read raw regression tables.
+- **Portfolio Construction**: Tickers and weights live at the top of the file — easy to change. The script takes the dot product of weights and asset returns to get a single portfolio return series.
+- **Downloading Prices**: `yfinance` pulls adjusted closing prices (already adjusted for dividends and splits, which tripped me up at first when I was getting weird return numbers).
+- **Calculating Returns**: Daily prices are resampled to month-end and converted to percentage changes to match the monthly Fama-French data.
+- **Downloading Factor Data**: `pandas-datareader` fetches the latest factors from the Dartmouth servers automatically, so I don't have to manually download CSVs every time I run the script.
+- **Aligning Datasets**: Inner join on date indices. This drops mismatched dates and prevents the `NaN` errors that kept breaking my early versions.
+- **Regression**: The script loops through CAPM, FF3, FF5, and FF6. One thing that confused me initially: I have to use `sm.add_constant(X)` to add an intercept column, otherwise the regression forces alpha to zero — which would make it literally impossible to detect outperformance.
+- **Attribution**: Each factor's contribution = its beta × the factor's annualized mean return. Simple multiplication, but it tells you exactly where the portfolio's returns came from.
+- **Rolling Regression**: A 36-month rolling window refits the model at each step to track how betas shift over time. This is how you catch style drift.
+- **Plotting**: `matplotlib` generates five charts. I spent a lot of time getting these to look clean and readable.
+- **Memo Generation**: The script parses the FF6 results and writes a plain-English summary. I added this because raw regression tables are hard to read if you're not staring at them every day.
 
 ---
 
@@ -259,42 +244,33 @@ I structured `factor_zoo.py` logically to separate configuration, data processin
 
 ## Visualizations
 
-Data visualization is essential for communicating complex econometric data. The project generates five distinct charts.
+I generate five charts because staring at regression tables only gets you so far. These make the results much easier to actually interpret.
 
 ### 1. Factor Loadings (`1_factor_loadings.png`)
-- **What it shows**: A grouped bar chart displaying the calculated Betas (exposures) across the four different models (CAPM, FF3, FF5, FF6).
-- **Why it exists**: To visually demonstrate how factor weights shift as the model complexity increases. For instance, you can observe if a high CAPM Market Beta is actually masking a heavy exposure to the Size factor in the FF6 model.
-- **How to interpret it**: A bar above zero indicates a positive tilt (e.g., long value, long small-cap). A bar below zero indicates a negative tilt (e.g., long growth, long large-cap).
-- **Conclusions to draw**: You can determine the structural style of the portfolio (e.g., "This is fundamentally a large-cap growth portfolio").
-- **Common mistakes**: Assuming a negative Beta means the portfolio is physically shorting stocks. In most long-only portfolios, a negative HML Beta simply means the portfolio is underweighting Value stocks relative to the market, giving it a Growth tilt.
+- **What it shows**: A grouped bar chart of betas across all four models (CAPM, FF3, FF5, FF6).
+- **Why it matters**: You can see how factor weights shift as the model gets more complex. A high CAPM market beta might actually be masking a heavy size or value exposure.
+- **How to read it**: Bars above zero = positive tilt (e.g., long value, long small-cap). Bars below zero = negative tilt (e.g., growth tilt, large-cap tilt).
+- **Common mistake**: A negative HML beta doesn't mean the portfolio is shorting value stocks — it just means the portfolio underweights value relative to the market.
 
 ### 2. Attribution Waterfall (`2_attribution_waterfall.png`)
-- **What it shows**: A waterfall chart breaking down the total annualized portfolio return into specific factor contributions.
-- **Why it exists**: It answers the ultimate question: "Why did this portfolio make money?"
-- **How to interpret it**: The final bar represents the total return. The preceding bars show how much Market risk, Size risk, Value risk, etc., contributed to that total in percentage terms. The Alpha bar represents the pure, unexplained value added.
-- **Conclusions to draw**: You can see exactly which macroeconomic bets paid off. If 90% of the return came from the Market factor, the portfolio manager mostly just rode a bull market.
-- **Common mistakes**: Believing that a high historical Alpha guarantees future outperformance. Alpha is often just luck or an unmeasured risk factor, and past attribution does not predict future returns.
+- **What it shows**: A waterfall chart breaking down the total annualized return into factor contributions.
+- **Why it matters**: It answers "why did this portfolio make money?" If 90% came from the market factor, the manager mostly just rode a bull market.
+- **Common mistake**: A high historical alpha doesn't guarantee future outperformance. It could be luck or an unmeasured risk.
 
 ### 3. Rolling Betas (`3_rolling_betas.png`)
-- **What it shows**: A line chart tracking the 36-month rolling betas of the Fama-French factors over time.
-- **Why it exists**: Static regressions assume factor exposures are constant. In reality, portfolio managers drift in style, and this chart visualizes that drift.
-- **How to interpret it**: Look for long-term trends in the lines. If the HML line drifts steadily downward over five years, the portfolio is slowly transitioning from a Value orientation to a Growth orientation.
-- **Conclusions to draw**: You can conclude whether a portfolio has remained true to its stated strategy over its lifespan.
-- **Common mistakes**: Overreacting to short-term spikes or dips in the rolling beta. A single month of weird returns can cause a spike that is just statistical noise, not a deliberate change in investment strategy.
+- **What it shows**: 36-month rolling betas for each factor over time.
+- **Why it matters**: Static regressions assume exposures never change. This chart reveals style drift — for example, a portfolio slowly shifting from value to growth.
+- **Common mistake**: Don't overreact to short-term spikes. A single weird month can cause a beta spike that's just noise.
 
 ### 4. Equity Curves (`4_equity_curves.png`)
-- **What it shows**: The cumulative compound growth of $1 invested in the portfolio versus $1 invested in the broader market benchmark.
-- **Why it exists**: It provides a standard, intuitive view of absolute performance and drawdowns over time.
-- **How to interpret it**: Logarithmic scaling is often utilized to compare compound growth rates accurately. The divergence between the lines represents the raw relative performance.
-- **Conclusions to draw**: You can quickly assess the overall success of the portfolio, how volatile the journey was, and when the major drawdowns occurred.
-- **Common mistakes**: Ignoring the risk taken to achieve the curve. A steeper equity curve might just be the result of reckless leverage rather than skill, which is why we need the factor models to contextualize it.
+- **What it shows**: Cumulative growth of $1 invested in the portfolio vs. the market benchmark.
+- **Why it matters**: A quick visual check of absolute performance and drawdowns.
+- **Common mistake**: A steeper equity curve might just mean more risk, not more skill — which is exactly why we need factor models to contextualize it.
 
 ### 5. Factor Correlation Matrix (`5_factor_correlation.png`)
-- **What it shows**: A heatmap displaying the Pearson correlation coefficients between the different factors and the portfolio itself.
-- **Why it exists**: To identify multicollinearity in the independent variables and show which macroeconomic drivers the portfolio is most tightly coupled with.
-- **How to interpret it**: Values close to 1.0 (dark red) indicate strong positive correlation. Values close to -1.0 (dark blue) indicate strong negative correlation. Values near 0 indicate no linear relationship.
-- **Conclusions to draw**: If two factors are highly correlated (e.g., > 0.8), the OLS regression might struggle to isolate their individual effects, potentially widening the standard errors.
-- **Common mistakes**: Confusing correlation with causation, or assuming that because a factor is uncorrelated over the whole period, it won't suddenly become highly correlated during a market crash (correlation breakdown).
+- **What it shows**: A heatmap of Pearson correlations between the factors.
+- **Why it matters**: If two factors are highly correlated (> 0.8), the regression may struggle to separate their individual effects, widening the standard errors (multicollinearity).
+- **Common mistake**: Factors that appear uncorrelated over the full period can suddenly become highly correlated during a crisis.
 
 </details>
 
@@ -304,29 +280,29 @@ Data visualization is essential for communicating complex econometric data. The 
 
 > **Hypothetical Output Analysis**
 
-Suppose the script runs on a custom portfolio and the FF6 model outputs the following:
+To show what the output actually looks like, here's how I'd read a hypothetical FF6 result:
 
-- **Market Beta = 1.02**: The portfolio moves closely with the market.
-- **SMB = -0.35**: A negative size coefficient indicates a strong bias toward Large-Cap stocks.
-- **HML = -0.42**: A negative value coefficient indicates a Growth bias.
-- **RMW = 0.28**: The portfolio tilts toward highly profitable companies.
-- **Momentum = 0.10**: A slight positive momentum tilt.
-- **Alpha = +2.0% (p-value = 0.03)**: 200 basis points of excess annualized return. Since the p-value is less than 0.05, it is statistically significant and likely due to skill or an unmeasured factor, rather than random chance.
-- **$R^2$ = 0.87**: 87% of the portfolio's variance is explained by these factors. Only 13% is idiosyncratic.
+- **Market Beta = 1.02**: Moves almost exactly with the market — no real leverage or hedging.
+- **SMB = -0.35**: Negative means it leans toward large-cap stocks (not small-caps).
+- **HML = -0.42**: Negative means growth tilt, not value.
+- **RMW = 0.28**: Favors profitable companies — makes sense for a quality-oriented portfolio.
+- **Momentum = 0.10**: Slight positive momentum tilt, but not a huge factor here.
+- **Alpha = +2.0% (p-value = 0.03)**: 200 basis points of excess return per year that the six factors can't explain. Since p < 0.05, this is statistically significant — probably skill or an unmeasured risk, not just luck.
+- **$R^2$ = 0.87**: The model explains 87% of the portfolio's return variance. Only 13% is stock-specific noise.
 
-**Conclusion**: This is a large-cap growth portfolio with a profitability tilt. The manager generated statistically significant alpha during this period.
+**My read**: This is basically a large-cap growth portfolio that leans toward quality companies and generated statistically significant alpha during the period. Whether that alpha persists going forward is a different question.
 
 ---
 
 ## Limitations
 
-Professional projects acknowledge their limitations honestly. Here are the main constraints of this framework:
+I want to be upfront about what this project doesn't do well:
 
-1. **Regression Assumptions**: OLS assumes a linear relationship, homoscedasticity (constant variance of errors), and no autocorrelation. Financial returns often have volatility clustering and heavy tails, which can distort standard errors and p-values.
-2. **Historical Bias**: This model strictly describes the past. A high historical Alpha provides no mathematical guarantee of future outperformance.
-3. **Survivorship Bias**: By pulling data for current tickers from `yfinance`, the model only analyzes companies that survived. Bankrupt or delisted companies are excluded, which artificially inflates historical returns.
-4. **Look-Ahead Bias**: While the code aligns dates carefully, factor datasets are sometimes revised retroactively by researchers. The data downloaded today might not perfectly reflect what was known to an investor at that historical moment.
-5. **Transaction Costs**: The attribution assumes frictionless trading. In reality, bid-ask spreads, slippage, and commissions eat into returns, making theoretical Alpha difficult to capture in practice.
-6. **Factor Instability**: Betas are not constant. A company can transition from a Small-Cap Value stock to a Large-Cap Growth stock over a decade. Static, full-period regressions average out these critical regime shifts.
-7. **Model Risk**: Even the 6-Factor model doesn't capture everything. A positive Alpha might just be a missing 7th factor (like Liquidity or Low Volatility) rather than actual skill.
-8. **Data Quality**: Free data sources like Yahoo Finance can occasionally suffer from missing dividends, incorrect split adjustments, or missing days, which directly impacts the accuracy of the calculated returns.
+- **Survivorship Bias**: I'm only looking at stocks that exist today. Companies that went bankrupt or were delisted don't appear in the data, which makes historical returns look better than they actually were.
+- **Monthly Frequency**: Monthly data smooths out a lot. Short-lived factor exposures within a month get completely missed.
+- **Static Weights**: The portfolio weights never rebalance, which isn't how real portfolios work. In practice, you'd rebalance periodically.
+- **Factor Timing**: The model assumes factor premia are constant over the whole period. In reality, value or momentum can underperform for *years* at a time.
+- **No Transaction Costs**: Real portfolios pay for trading, taxes, and slippage. This analysis ignores all of that.
+- **Look-Ahead Bias Risk**: Using the full sample period for a single regression implicitly uses future data to estimate past exposures. The inner join helps avoid the worst cases, but it's not a perfect solution.
+
+These are all things I'd want to address if I keep building on this project.
