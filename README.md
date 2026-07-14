@@ -22,18 +22,11 @@
 - [Visualizations](#visualizations)
 - [Example Interpretation](#example-interpretation)
 - [Limitations](#limitations)
-- [Future Improvements](#future-improvements)
-- [Installation](#installation)
-- [Usage](#usage)
-- [References](#references)
-- [License](#license)
-- [Author](#author)
-
 ---
 
 ## Motivation
 
-I built this project to better understand why portfolios earn the returns they do. Looking at raw performance—like a 15% annual return—isn't enough. If the broader equity market returned 20% over the same period, that 15% is actually an underperformance. Even worse, if that 15% came from taking on massive, uncompensated volatility, the risk-adjusted performance is poor. 
+I built this project to better understand why portfolios earn the returns they do. Looking at raw performance, like a 15% annual return, isn't enough. If the broader equity market returned 20% over the same period, that 15% is actually an underperformance. Even worse, if that 15% came from taking on massive and uncompensated volatility, the risk-adjusted performance is poor. 
 
 While learning about factor investing, I wanted to implement the Fama-French models myself instead of only reading about them. One goal of this project was to connect the financial theory I was learning with actual Python code.
 
@@ -337,57 +330,3 @@ Professional projects acknowledge their limitations honestly. Here are the main 
 6. **Factor Instability**: Betas are not constant. A company can transition from a Small-Cap Value stock to a Large-Cap Growth stock over a decade. Static, full-period regressions average out these critical regime shifts.
 7. **Model Risk**: Even the 6-Factor model doesn't capture everything. A positive Alpha might just be a missing 7th factor (like Liquidity or Low Volatility) rather than actual skill.
 8. **Data Quality**: Free data sources like Yahoo Finance can occasionally suffer from missing dividends, incorrect split adjustments, or missing days, which directly impacts the accuracy of the calculated returns.
-
----
-
-## Future Improvements
-
-I plan to expand this project to make it more robust:
-
-1. **Incorporate Transaction Costs**: Deducting estimated slippage and commission fees from the returns would provide a much more realistic measure of achievable Alpha.
-2. **Out-of-Sample Testing**: Splitting the data into a training set to estimate factor loadings and a validation set to see if those loadings persist would reduce the risk of overfitting.
-3. **GARCH Modeling**: Using Generalized Autoregressive Conditional Heteroskedasticity (GARCH) instead of standard OLS would better account for the volatility clustering in financial time series, leading to more accurate standard errors.
-4. **Handling Delisted Equities**: Integrating an institutional data source (like CRSP/Compustat) would eliminate survivorship bias by including companies that went bankrupt or were acquired.
-5. **Interactive Dashboards**: Porting the static Matplotlib charts into an interactive web application (like Plotly or Streamlit) would make exploring the data and zooming into specific timeframes much easier.
-
----
-
-## Installation
-
-This project requires Python 3.8+ and standard scientific computing libraries.
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-username/factor-zoo-attribution.git
-   cd factor-zoo-attribution
-   ```
-
-2. **Create a virtual environment (Recommended):**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-   *Required packages: `pandas`, `numpy`, `statsmodels`, `matplotlib`, `yfinance`, `pandas-datareader`.*
-
----
-
-## Usage
-
-The program is executed via the command line interface.
-
-```bash
-python factor_zoo.py
-```
-
-### Expected Workflow
-1. The script initializes and reads the user configuration (assets and weights) defined at the top of `factor_zoo.py`.
-2. It establishes network connections to Yahoo Finance and Dartmouth.
-3. Terminal output will begin printing, displaying data download progress and data shape validation.
-4. The script runs the statistical engine.
-5. Five high-resolution `.png` visualizations are saved to the local directory.
-6. A comprehensive `investment_memo.txt` is generated and saved.
