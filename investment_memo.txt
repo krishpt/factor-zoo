@@ -1,0 +1,28 @@
+Investment Memo
+
+Factor Zoo started as a project to help me understand something I kept seeing in finance but never fully understood: why does a portfolio earn the returns that it does? Most people only look at whether a portfolio went up or down, but professional investors spend a lot of time figuring out what actually drove those returns. I wanted to learn how that process works by building it myself.
+
+For this project, I created a hypothetical diversified portfolio made up of ten large-cap U.S. companies:
+
+Apple (15%)
+Microsoft (15%)
+NVIDIA (10%)
+JPMorgan Chase (10%)
+Johnson & Johnson (10%)
+Exxon Mobil (10%)
+Amazon (10%)
+Procter & Gamble (10%)
+UnitedHealth Group (5%)
+Meta Platforms (5%)
+
+I intentionally picked companies from different sectors instead of only using technology stocks. My goal was to build a portfolio that could show how different parts of the market contribute to overall performance while still being simple enough to analyze.
+
+The project downloads historical price data and then analyzes the portfolio using CAPM along with the Fama-French 3, 5, and 6 Factor Models. I used ordinary least squares regression to estimate the portfolio's factor exposures, alpha, and other statistics that help explain where returns came from. The project also creates charts showing factor loadings, return attribution, rolling factor exposures over time, portfolio performance compared to the market, and correlations between the different factors.
+
+One of the biggest things I learned is that returns don't happen for just one reason. A portfolio can perform well because the overall market is strong, because it has more exposure to growth companies, because it owns highly profitable businesses, or because it benefits from momentum. Looking at total return alone doesn't tell the whole story. Factor models help separate those different sources of return and give a much better picture of what is actually happening.
+
+This project also helped me connect finance, statistics, and Python in a way that reading textbooks never could. Instead of only learning what alpha, beta, or the Fama-French factors are, I had to implement them and interpret the results myself. That made the concepts much easier to understand.
+
+Although this project is much simpler than the systems used by professional asset managers or hedge funds, it follows many of the same ideas. My goal wasn't to build a production trading platform. It was to learn how quantitative portfolio analysis works and gain experience working with financial data, regression models, and Python.
+
+Overall, Factor Zoo gave me a much better understanding of how portfolio attribution works and gave me a solid foundation for more advanced quantitative finance projects in the future.
